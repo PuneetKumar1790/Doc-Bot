@@ -1,0 +1,21 @@
+# Node.js
+node_modules/
+.env
+
+# Python virtual env
+venv/
+
+# Logs
+*.log
+
+# Uploaded files
+uploads/
+
+# IDE/editor stuff
+.vscode/
+.idea/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
