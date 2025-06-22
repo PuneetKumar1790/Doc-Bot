@@ -1,5 +1,6 @@
 import readline from "readline";
 import fetch from "node-fetch";
+
 import fs from 'fs';
 import path from 'path';
 import multer from 'multer';
@@ -14,6 +15,10 @@ import { dirname } from 'path';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const app = express();
+import cors from 'cors';
+app.use(express.static('public'));
+
+
 const port = 3000;
 
 // File upload handling with multer
@@ -160,6 +165,7 @@ async function askQuestion() {
             });
 
             const data = await res.json();
+
             const reply = data.choices?.[0]?.message?.content || "No response";
 
             console.log("\nAssistant:", reply);
@@ -193,7 +199,7 @@ app.post('/upload', upload.single('pdf'), async (req, res) => {
         await addToSupermemory(extractedText);
 
         // Respond with success message
-        res.status(200).send('File processed and content added to Supermemory successfully.');
+        res.status(200).send(extractedText);
     } catch (error) {
         console.error("Error during file processing:", error.message);
         res.status(500).send('Error processing the PDF.');
