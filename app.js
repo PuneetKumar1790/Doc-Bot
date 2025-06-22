@@ -16,8 +16,13 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const app = express();
 import cors from 'cors';
-app.use(express.static('public'));
+app.use(cors({
+    origin: ['http://127.0.0.1:5500', 'http://localhost:5500'],
+    methods: ['GET', 'POST'],
+    credentials: true
+}));
 
+app.use(express.static('public'));
 
 const port = 3000;
 
@@ -179,33 +184,35 @@ async function askQuestion() {
     });
 }
 
-app.use(express.static('public'));
+app.use(express.urlencoded({ extended: true }));
+app.use(express.static(path.join(__dirname, 'public')));
 
 // POST route to upload PDF and process it
 app.post('/upload', upload.single('pdf'), async (req, res) => {
-    console.log('Received file:', req.file);
-
     if (!req.file) {
         return res.status(400).send('No file uploaded.');
     }
 
-    const filePath = path.normalize(path.join(__dirname, 'uploads', req.file.filename));
-    console.log('File Path:', filePath);
+    const filePath = path.join(__dirname, 'uploads', req.file.filename);
 
     try {
         const extractedText = await extractTextFromPDF(filePath);
-
-        // Add the extracted text to Supermemory
         await addToSupermemory(extractedText);
 
-        // Respond with success message
-        res.status(200).send(extractedText);
+        // Send success response
+        res.status(200).send('File processed successfully');
     } catch (error) {
         console.error("Error during file processing:", error.message);
-        res.status(500).send('Error processing the PDF.');
+
+        // Send detailed error message
+        res.status(500).send(`Error: ${error.message}`);
     } finally {
         // Clean up the uploaded file
-        fs.unlinkSync(filePath);
+        if (fs.existsSync(filePath)) {
+            fs.unlink(filePath, (err) => {
+                if (err) console.error('Error deleting file:', err);
+            });
+        }
     }
 });
 

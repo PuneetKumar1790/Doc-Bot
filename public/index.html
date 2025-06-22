@@ -3,6 +3,7 @@
 
 <head>
     <meta charset="UTF-8">
+    <base href="/">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>DocBot - Effortless FAQ Automation</title>
     <script src="https://cdn.tailwindcss.com"></script>
@@ -273,6 +274,12 @@
         </div>
     </section>
 
+    <div id="success-message"
+        class="hidden fixed top-4 right-4 bg-successGreen text-white px-4 py-2 rounded-lg shadow-lg z-50">
+        File uploaded successfully!
+    </div>
+
+
     <!-- Upload Section -->
     <section id="upload" class="py-16 bg-white dark:bg-gray-800">
         <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -330,14 +337,9 @@
                 </div>
 
                 <div id="result" class="hidden">
-                    <div class="bg-white p-4 rounded-lg shadow-sm dark:bg-gray-600">
-                        <h3 class="font-medium text-darkBlue mb-2 dark:text-white">Generated FAQs</h3>
-                        <div class="space-y-4">
-                            <div class="border-b pb-2 dark:border-gray-500">
-                                <p class="font-medium text-darkBlue dark:text-white">Q: What was extracted?</p>
-                                <p id="extracted-text" class="text-gray-700 mt-1 dark:text-gray-300"></p>
-                            </div>
-                        </div>
+                    <div class="bg-successGreen p-4 rounded-lg shadow-sm">
+                        <h3 class="font-medium text-white mb-2">Success!</h3>
+                        <p class="text-white">Your file has been processed successfully.</p>
                     </div>
                 </div>
 
@@ -757,160 +759,218 @@
         </div>
     </footer>
 
-    <script>
-        // Mobile menu toggle
-        const mobileMenuButton = document.getElementById('mobile-menu-button');
-        const mobileMenu = document.getElementById('mobile-menu');
+   <script>
+    // Mobile menu toggle
+    const mobileMenuButton = document.getElementById('mobile-menu-button');
+    const mobileMenu = document.getElementById('mobile-menu');
 
-        mobileMenuButton.addEventListener('click', () => {
-            mobileMenu.classList.toggle('hidden');
-        });
+    mobileMenuButton.addEventListener('click', () => {
+        mobileMenu.classList.toggle('hidden');
+    });
 
-        // Dark mode toggle
-        document.addEventListener("DOMContentLoaded", () => {
-            // 🌙 Theme toggle
-            const themeToggle = document.getElementById('theme-toggle');
-            const moonIcon = document.getElementById('moon-icon');
-            const sunIcon = document.getElementById('sun-icon');
-            const html = document.documentElement;
+    // Dark mode toggle
+    document.addEventListener("DOMContentLoaded", () => {
+        // 🌙 Theme toggle
+        const themeToggle = document.getElementById('theme-toggle');
+        const moonIcon = document.getElementById('moon-icon');
+        const sunIcon = document.getElementById('sun-icon');
+        const html = document.documentElement;
 
-            if (localStorage.getItem('theme') === 'dark' || (!localStorage.getItem('theme') && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-                html.classList.add('dark');
-                moonIcon?.classList.add('hidden');
-                sunIcon?.classList.remove('hidden');
-            } else {
-                html.classList.remove('dark');
-                moonIcon?.classList.remove('hidden');
-                sunIcon?.classList.add('hidden');
-            }
+        if (localStorage.getItem('theme') === 'dark' || 
+            (!localStorage.getItem('theme') && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            html.classList.add('dark');
+            if (moonIcon) moonIcon.classList.add('hidden');
+            if (sunIcon) sunIcon.classList.remove('hidden');
+        } else {
+            html.classList.remove('dark');
+            if (moonIcon) moonIcon.classList.remove('hidden');
+            if (sunIcon) sunIcon.classList.add('hidden');
+        }
 
-            themeToggle?.addEventListener('click', () => {
+        if (themeToggle) {
+            themeToggle.addEventListener('click', () => {
                 html.classList.toggle('dark');
                 if (html.classList.contains('dark')) {
                     localStorage.setItem('theme', 'dark');
-                    moonIcon?.classList.add('hidden');
-                    sunIcon?.classList.remove('hidden');
+                    if (moonIcon) moonIcon.classList.add('hidden');
+                    if (sunIcon) sunIcon.classList.remove('hidden');
                 } else {
                     localStorage.setItem('theme', 'light');
-                    moonIcon?.classList.remove('hidden');
-                    sunIcon?.classList.add('hidden');
+                    if (moonIcon) moonIcon.classList.remove('hidden');
+                    if (sunIcon) sunIcon.classList.add('hidden');
                 }
             });
+        }
 
-            // 📁 File Upload Elements
-            const fileUpload = document.getElementById("file-upload");
-            const uploadContainer = document.getElementById("upload-container");
-            const fileInfo = document.getElementById("file-info");
-            const fileName = document.getElementById("file-name");
-            const fileSize = document.getElementById("file-size");
-            const removeFile = document.getElementById("remove-file");
-            const processBtn = document.getElementById("process-btn");
-            const processing = document.getElementById("processing");
-            const result = document.getElementById("result");
-            const uploadBtn = document.getElementById("upload-btn");
+        // 📁 File Upload Elements
+    const fileUpload = document.getElementById("file-upload");
+    const uploadContainer = document.getElementById("upload-container");
+    const fileInfo = document.getElementById("file-info");
+    const fileName = document.getElementById("file-name");
+    const fileSize = document.getElementById("file-size");
+    const removeFile = document.getElementById("remove-file");
+    const processBtn = document.getElementById("process-btn");
+    const processing = document.getElementById("processing");
+    const result = document.getElementById("result");
+    const uploadBtn = document.getElementById("upload-btn");
 
-            if (!processBtn || !fileUpload) {
-                console.error("⛔ Missing required DOM elements");
+    if (!fileUpload || !processBtn) {
+        console.error("⛔ Missing required DOM elements");
+        return;
+    }
+
+    let selectedFile = null;
+    processBtn.disabled = true;
+
+    // Fix file input click issue
+    const fileLabel = document.querySelector('label[for="file-upload"]');
+    if (fileLabel) {
+        fileLabel.addEventListener('click', function(e) {
+            e.stopPropagation();
+        });
+    }
+
+    // File input change handler
+    fileUpload.addEventListener("change", () => {
+        const file = fileUpload.files[0];
+
+        if (!file) {
+            alert("❌ No file selected.");
+            return;
+        }
+
+        if (file.type !== "application/pdf") {
+            alert("❌ Only PDF files are allowed.");
+            fileUpload.value = "";
+            return;
+        }
+
+        if (file.size === 0) {
+            alert("❌ File appears to be empty (0 bytes).");
+            return;
+        }
+
+        selectedFile = file;
+
+        // Format file size
+        let fileSizeText;
+        if (file.size < 1024) {
+            fileSizeText = file.size + " bytes";
+        } else if (file.size < 1024 * 1024) {
+            fileSizeText = (file.size / 1024).toFixed(2) + " KB";
+        } else {
+            fileSizeText = (file.size / (1024 * 1024)).toFixed(2) + " MB";
+        }
+
+        fileName.textContent = file.name;
+        fileSize.textContent = fileSizeText;
+        fileInfo.classList.remove("hidden");
+        processBtn.disabled = false;
+    });
+
+    // Drag & drop
+    if (uploadContainer) {
+        uploadContainer.addEventListener("dragover", e => {
+            e.preventDefault();
+            uploadContainer.classList.add("bg-blue-50", "dark:bg-gray-600");
+        });
+
+        uploadContainer.addEventListener("dragleave", () => {
+            uploadContainer.classList.remove("bg-blue-50", "dark:bg-gray-600");
+        });
+
+        uploadContainer.addEventListener("drop", e => {
+            e.preventDefault();
+            uploadContainer.classList.remove("bg-blue-50", "dark:bg-gray-600");
+
+            const file = e.dataTransfer.files[0];
+            if (file && file.type === "application/pdf") {
+                // Create a new FileList since we can't directly assign to fileUpload.files
+                const dataTransfer = new DataTransfer();
+                dataTransfer.items.add(file);
+                fileUpload.files = dataTransfer.files;
+                
+                // Trigger change event manually
+                const event = new Event('change', { bubbles: true });
+                fileUpload.dispatchEvent(event);
+            } else {
+                alert("❌ Only PDF files are allowed.");
+            }
+        });
+
+        uploadContainer.addEventListener("click", () => {
+            fileUpload.click();
+        });
+    }
+
+    // Remove file
+    if (removeFile) {
+        removeFile.addEventListener("click", () => {
+            selectedFile = null;
+            fileUpload.value = "";
+            fileInfo.classList.add("hidden");
+            processBtn.disabled = true;
+            if (result) result.classList.add("hidden");
+        });
+    }
+
+     // Process button
+    if (processBtn) {
+        processBtn.addEventListener("click", async () => {
+            if (!selectedFile) {
+                alert("Please select a PDF file first.");
                 return;
             }
 
-            let selectedFile = null;
+            const formData = new FormData();
+            formData.append("pdf", selectedFile);
+
+            // Show loading
+            if (processing) processing.classList.remove("hidden");
             processBtn.disabled = true;
 
-            // File input
-            fileUpload.addEventListener("change", () => {
-                const file = fileUpload.files[0];
-                if (file && file.size > 0) {
-                    fileName.textContent = file.name;
-                    fileSize.textContent = (file.size / (1024 * 1024)).toFixed(2) + " MB";
-                    fileInfo.classList.remove("hidden");
-                    processBtn.disabled = false;
-                } else {
-                    alert("❌ Invalid or empty PDF file.");
+            try {
+                // Use relative URL to avoid CORS issues
+                const backendUrl = "/upload";
+                console.log("Sending request to:", backendUrl);
+                
+                const res = await fetch(backendUrl, {
+                    method: "POST",
+                    body: formData,
+                });
+
+                // Handle errors
+                if (!res.ok) {
+                    const errorText = await res.text();
+                    throw new Error(`Upload failed: ${res.status} - ${errorText}`);
                 }
-                if (file.size === 0) {
-                    alert("❌ File appears to be empty (0 bytes). Please try uploading again.");
-                    return;
+
+                const responseText = await res.text();
+                
+                // Show success UI
+                if (result) {
+                    result.classList.remove("hidden");
+                }
+                
+                // Show success toast
+                const successMsg = document.getElementById("success-message");
+                if (successMsg) {
+                    successMsg.classList.remove("hidden");
+                    setTimeout(() => successMsg.classList.add("hidden"), 3000);
                 }
 
-
-            });
-
-            // Drag & drop
-            uploadContainer?.addEventListener("dragover", e => {
-                e.preventDefault();
-                uploadContainer.classList.add("bg-blue-50", "dark:bg-gray-600");
-            });
-
-            uploadContainer?.addEventListener("dragleave", () => {
-                uploadContainer.classList.remove("bg-blue-50", "dark:bg-gray-600");
-            });
-
-            uploadContainer?.addEventListener("drop", e => {
-                e.preventDefault();
-                uploadContainer.classList.remove("bg-blue-50", "dark:bg-gray-600");
-
-                const file = e.dataTransfer.files[0];
-                if (file && file.type === "application/pdf") {
-                    fileUpload.files = e.dataTransfer.files;
-                    selectedFile = file;
-                    fileName.textContent = file.name;
-                    fileSize.textContent = (file.size / (1024 * 1024)).toFixed(2) + " MB";
-                    fileInfo.classList.remove("hidden");
-                    processBtn.disabled = false;
-                } else {
-                    alert("❌ Only PDF files are allowed.");
-                }
-            });
-
-            uploadContainer?.addEventListener("click", () => {
-                fileUpload.click();
-            });
-
-            removeFile?.addEventListener("click", () => {
-                selectedFile = null;
-                fileUpload.value = "";
-                fileInfo.classList.add("hidden");
-                processBtn.disabled = true;
-                result?.classList.add("hidden");
-            });
-
-            processBtn.addEventListener("click", async () => {
-                if (!selectedFile) return;
-
-                const formData = new FormData();
-                formData.append("pdf", selectedFile);
-
-                // Show loading
-                processing.classList.remove("hidden");
-                processBtn.disabled = true;
-
-                try {
-                    const res = await fetch("/upload", {
-                        method: "POST",
-                        body: formData,
-                    });
-
-                    const extractedText = await res.text();
-
-                    // Inject text into the paragraph
-                    document.getElementById("extracted-text").textContent = extractedText;
-
-                    // Show result block if hidden
-                    document.getElementById("result").classList.remove("hidden");
-
-                    console.log("✅ Upload success:", extractedText);
-                } catch (err) {
-                    alert("❌ Upload failed: " + err.message);
-                    console.error(err);
-                } finally {
-                    processBtn.disabled = false;
-                    processing.classList.add("hidden");
-                }
-            });
-
+                console.log("✅ Upload success:", responseText);
+            } catch (err) {
+                console.error("Upload error:", err);
+                alert(`Upload failed: ${err.message}`);
+            } finally {
+                processBtn.disabled = false;
+                if (processing) processing.classList.add("hidden");
+            }
         });
-    </script>
+    }
+})
+</script>
 </body>
 
 </html>
